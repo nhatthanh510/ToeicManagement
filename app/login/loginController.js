@@ -3,25 +3,41 @@
  */
 (function () {
     'use strict';
-
-    angular
-        .module('app')
-        .controller('LoginController', LoginController);
-
-    LoginController.$inject = ['$location', 'AuthenticationService', 'FlashService', 'UserService'];
-
-    function LoginController( $location, AuthenticationService, FlashService, UserService ) {
+    function LoginController($location, AuthenticationService, FlashService, UserService) {
         var vm = this;
 
-        vm.login = login;
-        vm.register = register;
-
-        initController();
-        function initController() {
-            AnimateLoginForm();
+        function login() {
+            vm.dataLoading = true;
+            AuthenticationService.Login(vm.username, vm.password, function (response) {
+                if (response.success) {
+                    AuthenticationService.SetCredentials(vm.username, vm.password);
+                    $location.path('/home');
+                } else {
+                    FlashService.Error(response.message);
+                    vm.dataLoading = false;
+                }
+            });
         }
 
-        function AnimateLoginForm() {
+        function register() {
+            vm.dataLoading = true;
+            UserService.Create(vm.user)
+                .then(function (response) {
+                    if (response.success) {
+                        FlashService.Success('Registration successful', true);
+                        $location.path('/login');
+                    } else {
+                        FlashService.Error(response.message);
+                        vm.dataLoading = false;
+                    }
+                });
+        }
+
+        function logOut() {
+            $location.path('/login');
+        }
+
+        function animateLoginForm() {
             $('.form').find('input, textarea').on('keyup blur focus', function (e) {
 
                 var $this = $(this),
@@ -34,17 +50,16 @@
                         label.addClass('active highlight');
                     }
                 } else if (e.type === 'blur') {
-                    if( $this.val() === '' ) {
+                    if ($this.val() === '') {
                         label.removeClass('active highlight');
                     } else {
                         label.removeClass('highlight');
                     }
                 } else if (e.type === 'focus') {
 
-                    if( $this.val() === '' ) {
+                    if ($this.val() === '') {
                         label.removeClass('highlight');
-                    }
-                    else if( $this.val() !== '' ) {
+                    } else if ($this.val() !== '') {
                         label.addClass('highlight');
                     }
                 }
@@ -67,31 +82,23 @@
             });
         }
 
-        function login() {
-            vm.dataLoading = true;
-            AuthenticationService.Login(vm.username, vm.password, function(response) {
-                if (response.success) {
-                    AuthenticationService.SetCredentials(vm.username, vm.password);
-                    $location.path('/home');
-                } else {
-                    FlashService.Error(response.message);
-                    vm.dataLoading = false;
-                }
-            })
-        }
+        vm.login = login;
+        vm.register = register;
+        vm.logOut = logOut;
 
-        function register() {
-            vm.dataLoading = true;
-            UserService.Create(vm.user)
-                .then(function (response) {
-                    if (response.success) {
-                        FlashService.Success('Registration successful', true);
-                        $location.path('/login');
-                    } else {
-                        FlashService.Error(response.message);
-                        vm.dataLoading = false;
-                    }
-                });
+        function initController() {
+            animateLoginForm();
         }
+        initController();
     }
-})();
+
+    LoginController.$inject = ['$location', 'AuthenticationService', 'FlashService', 'UserService'];
+
+    angular
+        .module('app')
+        .controller('LoginController', LoginController);
+
+
+
+
+}());

@@ -1,23 +1,17 @@
 ﻿(function () {
     'use strict';
-
-    angular
-        .module('app')
-        .factory('UserService', UserService);
-
-    UserService.$inject = ['$timeout', '$filter', '$q'];
     function UserService($timeout, $filter, $q) {
+        UserService.$inject = ['$timeout', '$filter', '$q'];
 
         var service = {};
 
-        service.GetAll = GetAll;
-        service.GetById = GetById;
-        service.GetByUsername = GetByUsername;
-        service.Create = Create;
-        service.Update = Update;
-        service.Delete = Delete;
+        function getUsers() {
+            if (!localStorage.users) {
+                localStorage.users = JSON.stringify([]);
+            }
 
-        return service;
+            return JSON.parse(localStorage.users);
+        }
 
         function GetAll() {
             var deferred = $q.defer();
@@ -26,27 +20,32 @@
         }
 
         function GetById(id) {
-            var deferred = $q.defer();
-            var filtered = $filter('filter')(getUsers(), { id: id });
-            var user = filtered.length ? filtered[0] : null;
+            var deferred = $q.defer(), filtered, user;
+            filtered  = $filter('filter')(getUsers(), { id: id });
+            user = filtered.length ? filtered[0] : null;
             deferred.resolve(user);
             return deferred.promise;
         }
 
-        function GetByUsername(username) {
-            var deferred = $q.defer();
-            var filtered = $filter('filter')(getUsers(), { email: username });
-            var user = filtered.length ? filtered[0] : null;
+        function getByUsername(username) {
+            var deferred = $q.defer(), filtered, user;
+            filtered = $filter('filter')(getUsers(), { email: username });
+            user = filtered.length ? filtered[0] : null;
             deferred.resolve(user);
             return deferred.promise;
+        }
+
+        // private functions
+        function setUsers(users) {
+            localStorage.users = JSON.stringify(users);
         }
 
         function Create(user) {
-            var deferred = $q.defer();
+            var deferred = $q.defer(), lastUser;
 
             // simulate api call with $timeout
             $timeout(function () {
-                GetByUsername(user.username)
+                getByUsername(user.username)
                     .then(function (duplicateUser) {
                         if (duplicateUser !== null) {
                             deferred.resolve({ success: false, message: 'Username "' + user.username + '" is already taken' });
@@ -54,7 +53,7 @@
                             var users = getUsers();
 
                             // assign id
-                            var lastUser = users[users.length - 1] || { id: 0 };
+                            lastUser = users[users.length - 1] || { id: 0 };
                             user.id = lastUser.id + 1;
 
                             // save to local storage
@@ -70,10 +69,10 @@
         }
 
         function Update(user) {
-            var deferred = $q.defer();
+            var deferred = $q.defer(), users, i;
 
-            var users = getUsers();
-            for (var i = 0; i < users.length; i++) {
+            users = getUsers();
+            for (i = 0; i < users.length; i++) {
                 if (users[i].id === user.id) {
                     users[i] = user;
                     break;
@@ -86,11 +85,11 @@
         }
 
         function Delete(id) {
-            var deferred = $q.defer();
+            var deferred = $q.defer(), users, i, user;
 
-            var users = getUsers();
-            for (var i = 0; i < users.length; i++) {
-                var user = users[i];
+            users = getUsers();
+            for (i = 0; i < users.length; i++) {
+                user = users[i];
                 if (user.id === id) {
                     users.splice(i, 1);
                     break;
@@ -102,18 +101,18 @@
             return deferred.promise;
         }
 
-        // private functions
+        service.GetAll = GetAll;
+        service.GetById = GetById;
+        service.GetByUsername = getByUsername;
+        service.Create = Create;
+        service.Update = Update;
+        service.Delete = Delete;
 
-        function getUsers() {
-            if(!localStorage.users){
-                localStorage.users = JSON.stringify([]);
-            }
-
-            return JSON.parse(localStorage.users);
-        }
-
-        function setUsers(users) {
-            localStorage.users = JSON.stringify(users);
-        }
+        return service;
     }
-})();
+
+    angular
+        .module('app')
+        .factory('UserService', UserService);
+
+}());
